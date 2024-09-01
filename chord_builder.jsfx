@@ -4,6 +4,7 @@ version: 1.0.0
 // TODO:
 // Keyboard korrekt zeichnen
 // Akkordbezeichnungen ermitteln
+// Schalter: Bass folgt neuer Inversion Root Note oder Original Root Note
 
 slider1:chord_type=0<0,4,1{Off,Major,Minor,Diminished,Augmented}>Chord
 slider2:inversion_type=0<0,2,1{Root Position,First Inversion,Second Inversion}>Inversion
