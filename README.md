@@ -4,7 +4,7 @@ Reaper JSFX Plugin for building MIDI chords
 - Rescan plugins
 - Example: https://soundcloud.com/klangraum2/impossible-dream-2
   
-Note: Not all functions are implemented yet. Some Combos, Sliders have no effect.
+Note: Alpha release. Not all functions are implemented yet. Some Combos, Sliders have no effect.
 
 ![Alt-Text](chord_builder_screenshot.jpg)
 
