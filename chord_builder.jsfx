@@ -1,13 +1,16 @@
 desc:Chord Builder
 author: Klangraum
 version: 1.0.0
-// TODO:
-// Keyboard korrekt zeichnen
-// Akkordbezeichnungen ermitteln
-// Schalter: Bass folgt neuer Inversion Root Note oder Original Root Note
+build: 20240902
 
-slider1:chord_type=0<0,4,1{Off,Major,Minor,Diminished,Augmented}>Chord
-slider2:inversion_type=0<0,2,1{Root Position,First Inversion,Second Inversion}>Inversion
+// TODO:
+// *Keyboard korrekt zeichnen (min. 4 Oktaven)
+// Akkordbezeichnungen ermitteln
+// Sus2, Sus4, Third Inversion, 13th
+// MIDI velocity von Root Note, korrekter Note Off bei Überlappungen (monophonic keyboard)
+
+slider1:chord_type=0<0,6,1{Off,Major,Minor,Diminished,Augmented,Sus2,Sus4}>Chord
+slider2:inversion_type=0<0,3,1{Root Position,First Inversion,Second Inversion,Third Inversion}>Inversion
 slider3:third_position=0<-24,24,12>3rd Position
 slider4:seventh=0<0,1,1>7th
 slider5:seventh_oktave=0<-24,24,12>7th Position
@@ -15,9 +18,13 @@ slider6:nineth=0<0,1,1>9th
 slider7:nineth_oktave=0<-24,24,12>9th Position
 slider8:eleventh=0<0,1,1>11th
 slider9:eleventh_oktave=0<-24,24,12>11th Position
-slider10:bass_type=0<0,2,1{Off,1 Octave,1+2 Octave}>Bass Mode
-slider11:bass_oktave=0<-24,0,12>Bass Position
-slider12:bass_fifth=0<0,1,1>Bass 5th
+slider10:thirteenth=0<0,1,1>13th
+slider11:thirteenth_oktave=0<-24,24,12>13th Position
+slider12:bass_type=0<0,2,1{Off,1 Octave,1+2 Octave}>Bass Mode
+slider13:bass_oktave=0<-24,0,12>Bass Position
+slider14:bass_follows=0<0,1,1{Root,Inversion}>Bass Follows
+slider15:bass_fifth=0<0,1,1>Bass 5th
+slider16:oktave_shift=0<-4,4,1>Octave Shift
 
 in_pin:none
 out_pin:none
@@ -28,12 +35,13 @@ out_pin:none
 // Speicherverwaltung muss manuell durchgeführt werden, da es sich um einen zusammenhängenden Speicherbereich handelt.
 chord_notes = 1000; // Startindex des Array zum Speichern der Akkordnoten (16 Noten), Größe nach Bedarf anpassen
 temp_notes = 1016; // Startindex des Array für temporäres Zwischenspeichern (16 Noten)
+keys = 1032;
 
 // Array der Notennamen
 note_names = "C C#D D#E F F#G G#A A#B ";
 
 // Funktion zur Zeichnung der Klaviatur am unteren Fensterrand
-function DrawKeyboardWithChord(chord_notes, num_notes) (
+function DrawKeyboardWithChord(chord_notes, num_notes, octave_shift) (
     // Dimensionen der Klaviatur
     keyboard_x = 10;
     keyboard_y = gfx_h - 60; // Position am unteren Fensterrand
@@ -45,15 +53,15 @@ function DrawKeyboardWithChord(chord_notes, num_notes) (
     // Zeichne die weißen Tasten
     gfx_set(1,1,1,1); // Setze die Farbe auf Weiß für die weißen Tasten
     i = 0;
-    while (i < 15) (
-        gfx_rect(keyboard_x + (i * white_key_width), keyboard_y, white_key_width, white_key_height);
+    while (i < 30) (
+        gfx_rect(keyboard_x + (i * white_key_width), keyboard_y, white_key_width, white_key_height); 
         i += 1;
     );
 
     // Zeichne die schwarzen Tasten
     i = 0;
-    while (i < 14) (
-        (i != 2 && i != 6 && i != 9 && i != 13) ? ( // Kein schwarzer Tasten an den Positionen 2 und 6 (gibt keine schwarzen Tasten zwischen E-F und B-C)
+    while (i < 29) (
+        (i != 2 && i != 6 && i != 9 && i != 13 && i != 16 && i != 20 && i != 23 && i != 27 && i != 30) ? ( // Kein schwarzer Tasten an den Positionen 2 und 6 (gibt keine schwarzen Tasten zwischen E-F und B-C)
             gfx_set(0,0,0,1); // Setze die Farbe auf Schwarz
             gfx_rect(keyboard_x + (i * white_key_width) + white_key_width - (black_key_width / 2), keyboard_y , black_key_width, black_key_height);
         );
@@ -63,53 +71,65 @@ function DrawKeyboardWithChord(chord_notes, num_notes) (
     // Zeichne schwarze Begrenzungslinien zwischen den weißen Tasten
     gfx_set(0,0,0,1); // Setze die Farbe auf Schwarz
     i = 0;
-    while (i < 16) (
+    while (i < 32) (
         gfx_line(keyboard_x + (i * white_key_width), keyboard_y, keyboard_x + (i * white_key_width), keyboard_y + white_key_height);
         i += 1;
     );
     
+    // Notenbezeichnungen der C-Noten
+    j=0;
+    pre_shift = 3;
+    loop(4,
+      gfx_x = keyboard_x + (7 * white_key_width * j); gfx_y = 140; // Position
+      gfx_set(1, 1, 1, 1); // Setze die Farbe auf Schwarz für den Text
+      gfx_drawstr(sprintf(#, "C%d", j + oktave_shift + pre_shift));
+      j += 1;
+    );
+    
     // Zeichne die gespielten Akkordnoten auf der Klaviatur
-    /*i = 0;
-    key_types = "wbwbwwbwbwbw";
+    i = 0;
     while (i < num_notes) (
         note = chord_notes[i];
         // Berechne die X-Position auf der Klaviatur
         note_pos = note % 12; // Position innerhalb der Oktave (0 bis 11)
-        octave = note / 12; // Oktave der Note
-        key_x = keyboard_x + note_pos * 10 +5;
+        octave = floor(note / 12); // Oktave der Note
+        // Passe Oktave an
+        octave = octave - oktave_shift - 4; // hier Slider Werte verwenden
+ 
+        // Pseudo-Map für Key Indizes
+        keys[0] = 0; // C - weiße Taste
+        keys[1] = 0; // C# - schwarze Taste
+        keys[2] = 1; // D - weiße Taste
+        keys[3] = 1; // D# - schwarze Taste
+        keys[4] = 2; // E - weiße Taste
+        keys[5] = 3; // F - weiße Taste
+        keys[6] = 3; // F# - schwarze Taste
+        keys[7] = 4; // G - weiße Taste
+        keys[8] = 4; // G# - schwarze Taste
+        keys[9] = 5; // A - weiße Taste
+        keys[10] = 5; // A# - schwarze Taste
+        keys[11] = 6; // B - weiße Taste
         
-        // Die X-Position muss angepasst werden, um die genaue Position der Note auf der Tastatur zu berücksichtigen
-        (note_pos == 1 || note_pos == 3 || note_pos == 6 || note_pos == 8 || note_pos == 10) ? (
-            key_x = keyboard_x + note_pos * 10+5; // Verschiebe für schwarze Tasten
+        // Zeichne die Note (hier als grüne Markierung)
+        gfx_set(.2,.8,0,1); // Setze die Farbe auf Grün
+        octave_width = 7*white_key_width;
+        (note_pos == 0 || note_pos == 2 || note_pos == 4 || note_pos == 5 || note_pos == 7 || note_pos == 9 || note_pos == 11) ? (
+          // Zeichen weisse Taste 
+          gfx_rect((octave*octave_width)+(keyboard_x + (keys[note_pos] * white_key_width)), keyboard_y+25, white_key_width, white_key_height-25);
         );
-        
-        key_y = keyboard_y;
-        
-        // Zeichne die Note (hier als rote Markierung)
-        gfx_set(1,0,0,1); // Setze die Farbe auf Rot
-        gfx_rect(keyboard_x + (note_pos * white_key_width), keyboard_y, white_key_width, white_key_height);
-        //gfx_rect(key_x, key_y, black_key_width/2, white_key_height / 4); // Zeichne eine rote Markierung auf der Taste
-        
+        (note_pos == 1 || note_pos == 3 || note_pos == 6|| note_pos == 8|| note_pos == 10) ? (
+          // Zeichne schwarze Taste
+          gfx_rect((octave*octave_width)+(keyboard_x + (keys[note_pos] * white_key_width) + white_key_width - (black_key_width / 2)), keyboard_y , black_key_width, black_key_height);
+        );
         i += 1;
-    );*/
+    );
 );
 
 // Funktion zur Berechnung der Inversionen
 function CalculateInversion(num_notes, inversion_type) (
-
-    // Original Akkord speichern für weitere Verwendung
-    i = 0;
-    loop(num_notes, 
-        temp_notes[i] = chord_notes[i];
-        i += 1;
-    );
     inversion_type == 1 ? (
         // Erste Umkehrung (First Inversion)
         num_notes > 0 ? ( 
-            temp_notes[0] = chord_notes[0];
-            temp_notes[1] = chord_notes[1];
-            temp_notes[2] = chord_notes[2];
-            
             chord_notes[0] = temp_notes[1];
             chord_notes[1] = temp_notes[2];
             chord_notes[2] = temp_notes[0] + 12; // Verschieben der Grundnote eine Oktave nach oben 
@@ -119,10 +139,6 @@ function CalculateInversion(num_notes, inversion_type) (
     inversion_type == 2 ? (
         // Zweite Umkehrung (Second Inversion)
         num_notes > 0 ? (
-            temp_notes[0] = chord_notes[0];
-            temp_notes[1] = chord_notes[1];
-            temp_notes[2] = chord_notes[2];
-            
             chord_notes[0] = temp_notes[2];
             chord_notes[1] = temp_notes[0] + 12;
             chord_notes[2] = temp_notes[1] + 12; // Verschieben der Grundnote und der ersten Umkehrung eine Oktave nach oben
@@ -204,6 +220,14 @@ function CalculateChord(note, chord_type) (
         chord_notes[2] = note + 8;
         num_notes = 3;
     );
+    
+    // Original Akkord speichern für weitere Verwendung
+    i = 0;
+    loop(num_notes, 
+        temp_notes[i] = chord_notes[i];
+        i += 1;
+    );
+    
     num_notes; // Rückgabe der Anzahl der Akkordnoten
 );
 
@@ -261,7 +285,7 @@ while (
         status == 0x90 ? (
             note = received_note;
             // Hier verschiede Switches einfügen: Chord, Inversion, Range, Bass
-            num_notes = CalculateChord(note, chord_type); // Akkord basierend auf Slider-Einstellung berechnen
+            num_notes = CalculateChord(received_note, chord_type); // Akkord basierend auf Slider-Einstellung berechnen
             inversion_type > 0 ? num_notes = CalculateInversion(num_notes, inversion_type); 
             num_notes = moveThirdPosition(num_notes, third_position);
             seventh == 1 ? num_notes = add7th(num_notes, seventh_oktave); 
@@ -274,12 +298,13 @@ while (
             i = 0;
             chord_str = sprintf(#,""); // Init
             note_str = sprintf(#,""); 
+            chord_numbers = sprintf(#,""); 
             while (i < num_notes) (
                 midisend(mpos, 0x90, chord_notes[i], 127); // Note On
-                //chord_str = strcat(chord_str, sprintf(#, "%d ", inversion_notes[i])); // Verkette String als Notennummern
+                strcat(chord_numbers, sprintf(#, "%d ", chord_notes[i])); // Verkette String als Notennummern
                 note_str = GetNoteName(chord_notes[i]); // Note als Name
                 note_str = RemoveDoubleSpaces2(note_str); // Entferne Leerzeichen
-                chord_str = strcat(chord_str, sprintf(#, "%s ", note_str)); // Erstelle eine String-Repräsentation der Akkordnoten
+                strcat(chord_str, sprintf(#, "%s ", note_str)); // Erstelle eine String-Repräsentation der Akkordnoten
                 i += 1;
             );
         );
@@ -300,16 +325,19 @@ while (
 
 @gfx 0 300 // Init x = auto, y = 200
 // Grafische Ausgabe der Note und des Akkords
-gfx_set(1,1,1,1); // Setze die Textfarbe (weiß)
+//gfx_set(1,1,1,1); // Setze die Textfarbe (weiß)
+gfx_set(.2,.8,0,1); // Setze die Farbe auf Grün
 gfx_clear = 0; // Hintergrund schwarz
 
 gfx_x = 10; gfx_y = 10; // Position
-gfx_drawstr(sprintf(#, "MIDI Note: %s", RemoveDoubleSpaces2(GetNoteName(note)))); // Zeichne den Notennamen
+gfx_drawstr(sprintf(#, "MIDI Note: %s", RemoveDoubleSpaces2(GetNoteName(received_note)))); // Zeichne den Notennamen
 
 gfx_x = 10; gfx_y = 30; // Neue Position für den Akkord
-gfx_drawstr(sprintf(#, "Chord Notes: %s", chord_str)); // Zeichne die Akkord-Noten
+gfx_drawstr(sprintf(#, "Chord Notes  : %s", chord_str)); // Zeichne die Akkord-Noten
+gfx_x = 10;gfx_y = 50; // Neue Position für den Akkord
+gfx_drawstr(sprintf(#, "Chord Numbers: %s", chord_numbers)); // Zeichne die Akkord-Noten
    
-gfx_x = 10; gfx_y = 50; // Neue Position
-gfx_drawstr(sprintf(#, "Notenanzahl: %d", num_notes)); // Zeichne den Text für die Anzahl der Noten
+gfx_x = 10; gfx_y = 70; // Neue Position
+gfx_drawstr(sprintf(#, "Notenanzahl  : %d", num_notes)); // Zeichne den Text für die Anzahl der Noten
 
-DrawKeyboardWithChord(chord_notes, num_notes);
+DrawKeyboardWithChord(chord_notes, num_notes, octave_shift);
