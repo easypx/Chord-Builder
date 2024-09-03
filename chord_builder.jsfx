@@ -1,7 +1,7 @@
 desc:Chord Builder
 author: Klangraum
 version: 1.0.0
-build: 20240903
+build: 20240904
 tags: MIDI processing
 
 // TODO:
@@ -10,14 +10,14 @@ tags: MIDI processing
 // *Sus2, Sus4, 13th
 // Inversions für num_note > 3
 // MIDI velocity von Root Note, korrekter Note Off bei Überlappungen (monophonic keyboard)
-// /(andere Farbe für Bassnoten)
+// (andere Farbe für Bassnoten)
 // Notenarray sortieren
 // Optimierung (mehrfaches Zeichnen des Keyboards, Preprocessor)
 // Random-Button
 // alle Intervalle schaltbar und beweglich machen, z.B. für Powerchords
 
 slider1:chord_type=0<0,6,1{Off,Major,Minor,Diminished,Augmented,Suspended2,Suspended4}>Chord
-slider2:inversion_type=0<0,3,1{Root Position,First Inversion,Second Inversion,/*Third Inversion*/}>Inversion
+slider2:inversion_type=0<0,4,1{Root Position,First Inversion,Second Inversion,Third Inversion,Fourth Inversion}>Inversion
 slider3:third_position=0<-24,24,12>3rd Position
 slider4:seventh=0<0,1,1>7th
 slider5:seventh_oktave=0<-24,24,12>7th Position
@@ -29,7 +29,7 @@ slider10:thirteenth=0<0,1,1>13th
 slider11:thirteenth_oktave=0<-24,24,12>13th Position
 slider12:bass_type=0<0,2,1{Off,1 Octave,1+2 Octave}>Bass Mode
 slider13:bass_oktave=0<-24,0,12>Bass Position
-slider14:bass_follows=0<1,1,1{/*Root*/,Inversion}>Bass Follows
+slider14:bass_follows=0<1,1,1{Root,Inversion}>Bass Follows
 slider15:bass_fifth=0<0,1,1>Bass 5th
 slider16:oktave_shift=0<-4,4,1>Display Range
 
@@ -145,13 +145,21 @@ function CalculateInversion(num_notes, inversion_type) (
             chord_notes[2] = temp_notes[0] + 12; // Verschieben der Grundnote eine Oktave nach oben 
             num_notes = 3;
         );
-        /*num_notes == 4 ? ( 
+        num_notes == 4 ? ( 
             chord_notes[0] = temp_notes[1];
             chord_notes[1] = temp_notes[2];
             chord_notes[2] = temp_notes[3];
             chord_notes[3] = temp_notes[0] + 12;
             num_notes = 4;
-        );*/
+        );
+        num_notes == 5 ? ( 
+            chord_notes[0] = temp_notes[1];
+            chord_notes[1] = temp_notes[2];
+            chord_notes[2] = temp_notes[3];
+            chord_notes[3] = temp_notes[4];
+            chord_notes[4] = temp_notes[0] + 12;
+            num_notes = 5;
+        );
     );
     inversion_type == 2 ? (
         // Zweite Umkehrung (Second Inversion)
@@ -161,10 +169,50 @@ function CalculateInversion(num_notes, inversion_type) (
             chord_notes[2] = temp_notes[1] + 12; // Verschieben der Grundnote und der ersten Umkehrung eine Oktave nach oben
             num_notes = 3;
         );
+        num_notes == 4 ? ( 
+            chord_notes[0] = temp_notes[2];
+            chord_notes[1] = temp_notes[3];
+            chord_notes[2] = temp_notes[0] + 12;
+            chord_notes[3] = temp_notes[1] + 12;
+            num_notes = 4;
+        );
+        num_notes == 5 ? ( 
+            chord_notes[0] = temp_notes[2];
+            chord_notes[1] = temp_notes[3];
+            chord_notes[2] = temp_notes[4];
+            chord_notes[3] = temp_notes[0] + 12;
+            chord_notes[4] = temp_notes[1] + 12;
+            num_notes = 5;
+        );
     );
     inversion_type == 3 ? (
         // Dritte Umkehrung (Third Inversion)
-        inversion_type = 3; // Dummy Statement
+        num_notes == 4 ? ( 
+            chord_notes[0] = temp_notes[3];
+            chord_notes[1] = temp_notes[0] + 12;
+            chord_notes[2] = temp_notes[1] + 12;
+            chord_notes[3] = temp_notes[2] + 12;
+            num_notes = 4;
+        );
+        num_notes == 5 ? ( 
+            chord_notes[0] = temp_notes[3];
+            chord_notes[1] = temp_notes[4];
+            chord_notes[2] = temp_notes[0] + 12;
+            chord_notes[3] = temp_notes[1] + 12;
+            chord_notes[4] = temp_notes[2] + 12;
+            num_notes = 5;
+        );
+    );
+    inversion_type == 4 ? (
+        // Vierte Umkehrung (Fourth Inversion)
+        num_notes == 5 ? ( 
+            chord_notes[0] = temp_notes[4];
+            chord_notes[1] = temp_notes[0] + 12;
+            chord_notes[2] = temp_notes[1] + 12;
+            chord_notes[3] = temp_notes[2] + 12;
+            chord_notes[4] = temp_notes[3] + 12;
+            num_notes = 5;
+        );
     );
 
     num_notes; // Rückgabe der Anzahl der Inversionsnoten
@@ -274,42 +322,65 @@ function moveThirdPosition(num_notes, third_position)(
 
 function add7th(num_notes, seventh_oktave)(
     chord_notes[num_notes] = chord_notes[0] + 10 + seventh_oktave; // Beachte Index num_notes!
-    //temp_notes[num_notes] = chord_notes[num_notes]; // Save
+    temp_notes[num_notes] = chord_notes[num_notes]; // Save
     num_notes += 1;
 );
 
 function add9th(num_notes, nineth_oktave)(
     chord_notes[num_notes] = chord_notes[0] + 14 + nineth_oktave; 
+    temp_notes[num_notes] = chord_notes[num_notes]; // Save
     num_notes += 1;
 );
 
 function add11th(num_notes, eleventh_oktave)(
-    chord_notes[num_notes] = chord_notes[0] + 17 + eleventh_oktave; 
+    chord_notes[num_notes] = chord_notes[0] + 17 + eleventh_oktave;
+    temp_notes[num_notes] = chord_notes[num_notes]; // Save
     num_notes += 1;
 );
 
 function add13th(num_notes, thirteenth_oktave)(
     chord_notes[num_notes] = chord_notes[0] + 21 + thirteenth_oktave; 
+    temp_notes[num_notes] = chord_notes[num_notes]; // Save
     num_notes += 1;
 );
 
 // Funktion zur Hinzufügung eines mehrstimmigen Basses zu einem Akkord
 function addBass(num_notes, bass_type, bass_oktave)(
     bass_type == 1 ? (
-        chord_notes[num_notes] = chord_notes[0] - 12 + bass_oktave; 
-        num_notes += 1;
+        bass_follows == 0 ? (
+            // Bass folgt Root Note
+            chord_notes[num_notes] = temp_notes[0] - 12 + bass_oktave;
+            num_notes += 1;
+        ) : (
+            // Bass folgt Inversion Root Note
+            chord_notes[num_notes] = chord_notes[0] - 12 + bass_oktave; 
+            num_notes += 1;
+        );
     );
     bass_type == 2 ? (
-        chord_notes[num_notes] = chord_notes[0] - 12 + bass_oktave; 
-        chord_notes[num_notes + 1] = chord_notes[0] - 24 + bass_oktave;
-        num_notes += 2;
+        bass_follows == 0 ? (
+            // Bass folgt Root Note
+            chord_notes[num_notes] = temp_notes[0] - 12 + bass_oktave;
+            chord_notes[num_notes + 1] = temp_notes[0] - 24 + bass_oktave;
+            num_notes += 2;
+        ) : (
+            // Bass folgt Inversion Root Note
+            chord_notes[num_notes] = chord_notes[0] - 12 + bass_oktave; 
+            chord_notes[num_notes + 1] = chord_notes[0] - 24 + bass_oktave;
+            num_notes += 2;
+        );
     );
     num_notes;
 );
 
 function addBassFifth(num_notes)(
-    chord_notes[num_notes] = chord_notes[0] -12 + 7 + bass_oktave; 
-    num_notes += 1;
+    bass_follows == 0 ? (
+        chord_notes[num_notes] = temp_notes[0] - 12 + 7 + bass_oktave; 
+        num_notes += 1;
+    ) : (
+        chord_notes[num_notes] = chord_notes[0] - 12 + 7 + bass_oktave; 
+        num_notes += 1;
+    );
 );
 
 @slider
@@ -327,12 +398,16 @@ while (
             note = received_note;
             // Hier verschiede Switches einfügen: Chord, Inversion, Range, Bass
             num_notes = CalculateChord(received_note, chord_type); // Akkord basierend auf Slider-Einstellung berechnen
-            inversion_type > 0 ? num_notes = CalculateInversion(num_notes, inversion_type); 
+            // Lage 
             num_notes = moveThirdPosition(num_notes, third_position);
+            // addN Intervalle
             seventh == 1 ? num_notes = add7th(num_notes, seventh_oktave); 
             nineth == 1 ? num_notes = add9th(num_notes, nineth_oktave);
             eleventh == 1 ? num_notes = add11th(num_notes, eleventh_oktave);
             thirteenth == 1 ? num_notes = add13th(num_notes, thirteenth_oktave);
+            // Inversion
+            inversion_type > 0 ? num_notes = CalculateInversion(num_notes, inversion_type);
+            // Bass
             bass_type > 0 ? num_notes = addBass(num_notes, bass_type, bass_oktave);
             bass_fifth == 1 ? num_notes = addBassFifth(num_notes);
             
@@ -365,7 +440,7 @@ while (
     );
 );
 
-@gfx 0 300 // Init x = auto, y = 200
+@gfx 0 300 // Init x = auto
 // Grafische Ausgabe der Note und des Akkords
 //gfx_set(1,1,1,1); // Setze die Textfarbe (weiß)
 gfx_set(1,1,1,1); // Setze die Farbe auf Grün
@@ -383,5 +458,3 @@ gfx_x = 10; gfx_y = 50; // Neue Position
 gfx_drawstr(sprintf(#, "Notenanzahl  : %d", num_notes)); // Zeichne den Text für die Anzahl der Noten
 
 DrawKeyboardWithChord(chord_notes, num_notes, octave_shift);
-
-
