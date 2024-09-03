@@ -7,12 +7,13 @@ tags: MIDI processing
 // TODO:
 // *Keyboard korrekt zeichnen (min. 4 Oktaven)
 // Akkordbezeichnungen ermitteln
-// *Sus2, Sus4, Third Inversion, 13th
+// *Sus2, Sus4, 13th
+// Inversions für num_note > 3
 // MIDI velocity von Root Note, korrekter Note Off bei Überlappungen (monophonic keyboard)
-// andere Farbe für Bassnoten
+// /(andere Farbe für Bassnoten)
 // Notenarray sortieren
-// Optimierung (mehrfaches Zeichnen des Keyboards)
-// Random Button
+// Optimierung (mehrfaches Zeichnen des Keyboards, Preprocessor)
+// Random-Button
 // alle Intervalle schaltbar und beweglich machen, z.B. für Powerchords
 
 slider1:chord_type=0<0,6,1{Off,Major,Minor,Diminished,Augmented,Suspended2,Suspended4}>Chord
@@ -28,7 +29,7 @@ slider10:thirteenth=0<0,1,1>13th
 slider11:thirteenth_oktave=0<-24,24,12>13th Position
 slider12:bass_type=0<0,2,1{Off,1 Octave,1+2 Octave}>Bass Mode
 slider13:bass_oktave=0<-24,0,12>Bass Position
-slider14:bass_follows=0<0,1,1{Root,Inversion}>Bass Follows
+slider14:bass_follows=0<1,1,1{/*Root*/,Inversion}>Bass Follows
 slider15:bass_fifth=0<0,1,1>Bass 5th
 slider16:oktave_shift=0<-4,4,1>Display Range
 
@@ -381,3 +382,5 @@ gfx_x = 10; gfx_y = 50; // Neue Position
 gfx_drawstr(sprintf(#, "Notenanzahl  : %d", num_notes)); // Zeichne den Text für die Anzahl der Noten
 
 DrawKeyboardWithChord(chord_notes, num_notes, octave_shift);
+
+
