@@ -1,19 +1,22 @@
 desc:Chord Builder
 author: Klangraum
 version: 1.0.0
-build: 20240902
+build: 20240903
+tags: MIDI processing
 
 // TODO:
 // *Keyboard korrekt zeichnen (min. 4 Oktaven)
 // Akkordbezeichnungen ermitteln
-// Sus2, Sus4, Third Inversion, 13th
+// *Sus2, Sus4, Third Inversion, 13th
 // MIDI velocity von Root Note, korrekter Note Off bei Überlappungen (monophonic keyboard)
 // andere Farbe für Bassnoten
 // Notenarray sortieren
-// addN Position?
+// Optimierung (mehrfaches Zeichnen des Keyboards)
+// Random Button
+// alle Intervalle schaltbar und beweglich machen, z.B. für Powerchords
 
-slider1:chord_type=0<0,6,1{Off,Major,Minor,Diminished,Augmented,Sus2,Sus4}>Chord
-slider2:inversion_type=0<0,3,1{Root Position,First Inversion,Second Inversion,Third Inversion}>Inversion
+slider1:chord_type=0<0,6,1{Off,Major,Minor,Diminished,Augmented,Suspended2,Suspended4}>Chord
+slider2:inversion_type=0<0,3,1{Root Position,First Inversion,Second Inversion,/*Third Inversion*/}>Inversion
 slider3:third_position=0<-24,24,12>3rd Position
 slider4:seventh=0<0,1,1>7th
 slider5:seventh_oktave=0<-24,24,12>7th Position
@@ -27,7 +30,7 @@ slider12:bass_type=0<0,2,1{Off,1 Octave,1+2 Octave}>Bass Mode
 slider13:bass_oktave=0<-24,0,12>Bass Position
 slider14:bass_follows=0<0,1,1{Root,Inversion}>Bass Follows
 slider15:bass_fifth=0<0,1,1>Bass 5th
-slider16:oktave_shift=0<-4,4,1>Octave Range
+slider16:oktave_shift=0<-4,4,1>Display Range
 
 in_pin:none
 out_pin:none
@@ -83,11 +86,11 @@ function DrawKeyboardWithChord(chord_notes, num_notes, octave_shift) (
     
     // Notenbezeichnungen der C-Noten
     j=0;
-    pre_shift = 3;
     loop(4,
-      gfx_x = keyboard_x + (7 * white_key_width * j); gfx_y = 140; // Position
-      gfx_set(1, 1, 1, 1); // Setze die Farbe auf Schwarz für den Text
-      gfx_drawstr(sprintf(#, "C%d", j + oktave_shift + pre_shift));
+      gfx_x = keyboard_x + (octave_width * j); 
+      gfx_y = keyboard_y - 10; // Position
+      gfx_set(1, 1, 1, 1); // Setze die Farbe auf Weiss für den Text
+      gfx_drawstr(sprintf(#, "C%d", j + oktave_shift + 3));
       j += 1;
     );
     
@@ -134,21 +137,32 @@ function DrawKeyboardWithChord(chord_notes, num_notes, octave_shift) (
 function CalculateInversion(num_notes, inversion_type) (
     inversion_type == 1 ? (
         // Erste Umkehrung (First Inversion)
-        num_notes > 0 ? ( 
+        num_notes == 3 ? ( 
             chord_notes[0] = temp_notes[1];
             chord_notes[1] = temp_notes[2];
             chord_notes[2] = temp_notes[0] + 12; // Verschieben der Grundnote eine Oktave nach oben 
             num_notes = 3;
         );
+        /*num_notes == 4 ? ( 
+            chord_notes[0] = temp_notes[1];
+            chord_notes[1] = temp_notes[2];
+            chord_notes[2] = temp_notes[3];
+            chord_notes[3] = temp_notes[0] + 12;
+            num_notes = 4;
+        );*/
     );
     inversion_type == 2 ? (
         // Zweite Umkehrung (Second Inversion)
-        num_notes > 0 ? (
+        num_notes == 3 ? (
             chord_notes[0] = temp_notes[2];
             chord_notes[1] = temp_notes[0] + 12;
             chord_notes[2] = temp_notes[1] + 12; // Verschieben der Grundnote und der ersten Umkehrung eine Oktave nach oben
             num_notes = 3;
         );
+    );
+    inversion_type == 3 ? (
+        // Dritte Umkehrung (Third Inversion)
+        inversion_type = 3; // Dummy Statement
     );
 
     num_notes; // Rückgabe der Anzahl der Inversionsnoten
@@ -181,7 +195,7 @@ function GetNoteName(note) (
     sprintf(#, "%s%d", note_name, octave); // Notenname mit Oktave kombinieren
 );
 
-// Funktion zur Berechnung der Akkorde und Rückgabe der Anzahl der Noten
+// Funktion zur Berechnung der Akkorde (Triaden) und Rückgabe der Anzahl der Noten
 function CalculateChord(note, chord_type) (
     num_notes = 0;
 
@@ -225,6 +239,20 @@ function CalculateChord(note, chord_type) (
         chord_notes[2] = note + 8;
         num_notes = 3;
     );
+    // Suspended2 Akkord
+    chord_type == 5 ? (
+        chord_notes[0] = note;
+        chord_notes[1] = note + 2;
+        chord_notes[2] = note + 7;
+        num_notes = 3;
+    );
+    // Suspended4 Akkord
+    chord_type == 6 ? (
+        chord_notes[0] = note;
+        chord_notes[1] = note + 5;
+        chord_notes[2] = note + 7;
+        num_notes = 3;
+    );
     
     // Original Akkord speichern für weitere Verwendung
     i = 0;
@@ -244,6 +272,7 @@ function moveThirdPosition(num_notes, third_position)(
 
 function add7th(num_notes, seventh_oktave)(
     chord_notes[num_notes] = chord_notes[0] + 10 + seventh_oktave; // Beachte Index num_notes!
+    //temp_notes[num_notes] = chord_notes[num_notes]; // Save
     num_notes += 1;
 );
 
@@ -254,6 +283,11 @@ function add9th(num_notes, nineth_oktave)(
 
 function add11th(num_notes, eleventh_oktave)(
     chord_notes[num_notes] = chord_notes[0] + 17 + eleventh_oktave; 
+    num_notes += 1;
+);
+
+function add13th(num_notes, thirteenth_oktave)(
+    chord_notes[num_notes] = chord_notes[0] + 21 + thirteenth_oktave; 
     num_notes += 1;
 );
 
@@ -296,6 +330,7 @@ while (
             seventh == 1 ? num_notes = add7th(num_notes, seventh_oktave); 
             nineth == 1 ? num_notes = add9th(num_notes, nineth_oktave);
             eleventh == 1 ? num_notes = add11th(num_notes, eleventh_oktave);
+            thirteenth == 1 ? num_notes = add13th(num_notes, thirteenth_oktave);
             bass_type > 0 ? num_notes = addBass(num_notes, bass_type, bass_oktave);
             bass_fifth == 1 ? num_notes = addBassFifth(num_notes);
             
@@ -331,7 +366,7 @@ while (
 @gfx 0 300 // Init x = auto, y = 200
 // Grafische Ausgabe der Note und des Akkords
 //gfx_set(1,1,1,1); // Setze die Textfarbe (weiß)
-gfx_set(.2,.8,0,1); // Setze die Farbe auf Grün
+gfx_set(1,1,1,1); // Setze die Farbe auf Grün
 gfx_clear = 0; // Hintergrund schwarz
 
 gfx_x = 10; gfx_y = 10; // Position
@@ -339,10 +374,10 @@ gfx_drawstr(sprintf(#, "MIDI Note: %s", RemoveDoubleSpaces2(GetNoteName(received
 
 gfx_x = 10; gfx_y = 30; // Neue Position für den Akkord
 gfx_drawstr(sprintf(#, "Chord Notes  : %s", chord_str)); // Zeichne die Akkord-Noten
-gfx_x = 10;gfx_y = 50; // Neue Position für den Akkord
-gfx_drawstr(sprintf(#, "Chord Numbers: %s", chord_numbers)); // Zeichne die Akkord-Noten
+//gfx_x = 10;gfx_y = 50; // Neue Position für den Akkord
+//gfx_drawstr(sprintf(#, "Chord Numbers: %s", chord_numbers)); // Zeichne die Akkord-Noten
    
-gfx_x = 10; gfx_y = 70; // Neue Position
+gfx_x = 10; gfx_y = 50; // Neue Position
 gfx_drawstr(sprintf(#, "Notenanzahl  : %d", num_notes)); // Zeichne den Text für die Anzahl der Noten
 
 DrawKeyboardWithChord(chord_notes, num_notes, octave_shift);
