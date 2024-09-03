@@ -44,6 +44,7 @@ chord_notes = 1000; // Startindex des Array zum Speichern der Akkordnoten (16 No
 temp_notes = 1016; // Startindex des Array für temporäres Zwischenspeichern (16 Noten)
 keys = 1032; // Startindex des Array für Pseudo-Map für Key Indizes
 oktave_shift = -2; // Setze auf -2
+bass_follows = 1; 
 
 // Array der Notennamen
 note_names = "C C#D D#E F F#G G#A A#B ";
