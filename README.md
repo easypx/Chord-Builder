@@ -7,6 +7,6 @@ Reaper JSFX Plugin for building MIDI chords
   
 Note: Alpha release. Not all functions are implemented yet. Some Combos, Sliders have no effect.
 
-![Alt-Text](chord_builder_screenshot.jpg)
+![Alt-Text](chord_builder_screenshot_2.jpg)
 
 JSFX Programming: http://reaper.fm/sdk/js/js.php#js_intro
