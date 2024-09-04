@@ -5,7 +5,7 @@ Reaper JSFX Plugin for building MIDI chords
 - Example: https://soundcloud.com/klangraum2/impossible-dream-2
 - Experimental VST2 (64Bit) chord_builder_win_x64_vst2.dll (no custom GUI yet, but fully functional)
   
-Note: Alpha release. Not all functions are implemented yet. Some Combos, Sliders have no effect.
+Note: Alpha release. Not all functions are implemented yet. Some Combos, Sliders may have no effect.
 
 ![Alt-Text](images/chord_builder_screenshot_2.jpg)
 
