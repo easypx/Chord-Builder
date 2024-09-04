@@ -17,10 +17,10 @@ tags: MIDI processing
 // alle Intervalle schaltbar und beweglich machen, z.B. für Powerchords
 
 slider1:chord_type=0<0,6,1{Off,Major,Minor,Diminished,Augmented,Suspended2,Suspended4}>Chord
-slider2:inversion_type=0<0,4,1{Root Position,First Inversion,Second Inversion,Third Inversion,Fourth Inversion}>Inversion
+slider2:inversion_type=0<0,4,1{Root Position,1.Inversion,2.Inversion,3.Inversion,4.Inversion,5.Inversion,6.Inversion}>Inversion
 slider3:third_position=0<-24,24,12>3rd Position
 slider4:seventh=0<0,1,1>7th
-// hidden slider marked with prefix "-"
+// hidden marked with prefix "-"
 slider5:seventh_octave=0<-24,24,12>-7th Position
 slider6:nineth=0<0,1,1>9th
 // hidden
@@ -145,109 +145,12 @@ function DrawKeyboardWithChord(chord_notes, num_notes, octave_shift) (
 
 // Funktion zur Berechnung der Inversionen
 function CalculateInversion(num_notes, inversion_type) (
-    inversion_type == 1 ? (
-        // Erste Umkehrung (First Inversion)
-        num_notes == 3 ? ( 
-            chord_notes[0] = temp_notes[1];
-            chord_notes[1] = temp_notes[2];
-            chord_notes[2] = temp_notes[0] + 12; // Verschieben der Grundnote eine Oktave nach oben 
-            num_notes = 3;
-        );
-        num_notes == 4 ? ( 
-            chord_notes[0] = temp_notes[1];
-            chord_notes[1] = temp_notes[2];
-            chord_notes[2] = temp_notes[3];
-            chord_notes[3] = temp_notes[0] + 12;
-            num_notes = 4;
-        );
-        num_notes == 5 ? ( 
-            chord_notes[0] = temp_notes[1];
-            chord_notes[1] = temp_notes[2];
-            chord_notes[2] = temp_notes[3];
-            chord_notes[3] = temp_notes[4];
-            chord_notes[4] = temp_notes[0] + 12;
-            num_notes = 5;
-        );
+    i = 0;
+    while (i < num_notes) (
+        new_pos = (i + inversion_type) % num_notes; // Berechne die neue Position
+        chord_notes[i] = temp_notes[new_pos] + (new_pos < inversion_type ? 12 : 0); // Verschiebe die Note, wenn nötig, eine Oktave nach oben
+        i += 1;
     );
-    inversion_type == 2 ? (
-        // Zweite Umkehrung (Second Inversion)
-        num_notes == 3 ? (
-            chord_notes[0] = temp_notes[2];
-            chord_notes[1] = temp_notes[0] + 12;
-            chord_notes[2] = temp_notes[1] + 12; // Verschieben der Grundnote und der ersten Umkehrung eine Oktave nach oben
-            num_notes = 3;
-        );
-        num_notes == 4 ? ( 
-            chord_notes[0] = temp_notes[2];
-            chord_notes[1] = temp_notes[3];
-            chord_notes[2] = temp_notes[0] + 12;
-            chord_notes[3] = temp_notes[1] + 12;
-            num_notes = 4;
-        );
-        num_notes == 5 ? ( 
-            chord_notes[0] = temp_notes[2];
-            chord_notes[1] = temp_notes[3];
-            chord_notes[2] = temp_notes[4];
-            chord_notes[3] = temp_notes[0] + 12;
-            chord_notes[4] = temp_notes[1] + 12;
-            num_notes = 5;
-        );
-    );
-    inversion_type == 3 ? (
-        // Dritte Umkehrung (Third Inversion)
-        num_notes == 4 ? ( 
-            chord_notes[0] = temp_notes[3];
-            chord_notes[1] = temp_notes[0] + 12;
-            chord_notes[2] = temp_notes[1] + 12;
-            chord_notes[3] = temp_notes[2] + 12;
-            num_notes = 4;
-        );
-        num_notes == 5 ? ( 
-            chord_notes[0] = temp_notes[3];
-            chord_notes[1] = temp_notes[4];
-            chord_notes[2] = temp_notes[0] + 12;
-            chord_notes[3] = temp_notes[1] + 12;
-            chord_notes[4] = temp_notes[2] + 12;
-            num_notes = 5;
-        );
-    );
-    inversion_type == 4 ? (
-        // Vierte Umkehrung (Fourth Inversion)
-        num_notes == 5 ? ( 
-            chord_notes[0] = temp_notes[4];
-            chord_notes[1] = temp_notes[0] + 12;
-            chord_notes[2] = temp_notes[1] + 12;
-            chord_notes[3] = temp_notes[2] + 12;
-            chord_notes[4] = temp_notes[3] + 12;
-            num_notes = 5;
-        );
-    );
-    inversion_type == 5 ? (
-        // Vierte Umkehrung (Fourth Inversion)
-        num_notes == 6 ? ( 
-            chord_notes[0] = temp_notes[5];
-            chord_notes[1] = temp_notes[0] + 12;
-            chord_notes[2] = temp_notes[1] + 12;
-            chord_notes[3] = temp_notes[2] + 12;
-            chord_notes[4] = temp_notes[3] + 12;
-            chord_notes[5] = temp_notes[3] + 12;
-            num_notes = 6;
-        );
-    );
-    inversion_type == 6 ? (
-        // Vierte Umkehrung (Fourth Inversion)
-        num_notes == 7 ? ( 
-            chord_notes[0] = temp_notes[4];
-            chord_notes[1] = temp_notes[0] + 12;
-            chord_notes[2] = temp_notes[1] + 12;
-            chord_notes[3] = temp_notes[2] + 12;
-            chord_notes[4] = temp_notes[3] + 12;
-            chord_notes[5] = temp_notes[2] + 12;
-            chord_notes[6] = temp_notes[3] + 12;
-            num_notes = 7;
-        );
-    );
-
     num_notes; // Rückgabe der Anzahl der Inversionsnoten
 );
 
@@ -355,25 +258,25 @@ function moveThirdPosition(num_notes, third_position)(
 
 function add7th(num_notes, seventh_octave)(
     chord_notes[num_notes] = chord_notes[0] + 10 + seventh_octave; // Beachte Index num_notes!
-    temp_notes[num_notes] = chord_notes[num_notes]; // Save
+    temp_notes[num_notes] = chord_notes[num_notes]; // Sichere neue Note in temp_note
     num_notes += 1;
 );
 
 function add9th(num_notes, nineth_octave)(
     chord_notes[num_notes] = chord_notes[0] + 14 + nineth_octave; 
-    temp_notes[num_notes] = chord_notes[num_notes]; // Save
+    temp_notes[num_notes] = chord_notes[num_notes]; // Sichere neue Note in temp_note
     num_notes += 1;
 );
 
 function add11th(num_notes, eleventh_octave)(
     chord_notes[num_notes] = chord_notes[0] + 17 + eleventh_octave;
-    temp_notes[num_notes] = chord_notes[num_notes]; // Save
+    temp_notes[num_notes] = chord_notes[num_notes]; // Sichere neue Note in temp_note
     num_notes += 1;
 );
 
 function add13th(num_notes, eleventh_octave)(
     chord_notes[num_notes] = chord_notes[0] + 21 + eleventh_octave; 
-    temp_notes[num_notes] = chord_notes[num_notes]; // Save
+    temp_notes[num_notes] = chord_notes[num_notes]; // Sichere neue Note in temp_note
     num_notes += 1;
 );
 
