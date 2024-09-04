@@ -8,10 +8,10 @@ tags: MIDI processing
 // *Keyboard korrekt zeichnen (min. 4 Oktaven)
 // Akkordbezeichnungen ermitteln
 // *Sus2, Sus4, 13th
-// Inversions für num_note > 3
+// *Inversions für num_note > 3
 // MIDI velocity von Root Note, korrekter Note Off bei Überlappungen (monophonic keyboard)
 // (andere Farbe für Bassnoten)
-// Notenarray sortieren
+// Notenarray aufsteigend sortieren
 // Optimierung (mehrfaches Zeichnen des Keyboards, Preprocessor)
 // Random-Button
 // alle Intervalle schaltbar und beweglich machen, z.B. für Powerchords
