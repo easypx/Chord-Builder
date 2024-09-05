@@ -1,7 +1,7 @@
 desc:Chord Builder
 author: Klangraum
 version: 1.0.0
-build: 20240904
+build: 20240905
 tags: MIDI processing
 
 // TODO:
@@ -9,12 +9,13 @@ tags: MIDI processing
 // Akkordbezeichnungen ermitteln
 // *Sus2, Sus4, 13th
 // *Inversions für num_note > 3
-// MIDI velocity von Root Note, korrekter Note Off bei Überlappungen (monophonic keyboard)
+// *MIDI velocity von Root Note, *korrekter Note Off bei Überlappungen (monophonic keyboard)
 // (andere Farbe für Bassnoten)
-// Notenarray aufsteigend sortieren
-// Optimierung (mehrfaches Zeichnen des Keyboards, Preprocessor)
+// Notenarray sortieren
+// (Optimierung (mehrfaches Zeichnen des Keyboards, Preprocessor))
 // Random-Button
 // alle Intervalle schaltbar und beweglich machen, z.B. für Powerchords
+// Zeige alle Noten in der Tonart (andere Farbe, Alpha)
 
 slider1:chord_type=0<0,6,1{Off,Major,Minor,Diminished,Augmented,Suspended2,Suspended4}>Chord
 slider2:inversion_type=0<0,4,1{Root Position,1.Inversion,2.Inversion,3.Inversion,4.Inversion,5.Inversion,6.Inversion}>Inversion
@@ -47,7 +48,7 @@ out_pin:none
 chord_notes = 1000; // Startindex des Array zum Speichern der Akkordnoten (16 Noten), Größe nach Bedarf anpassen
 temp_notes = 1016; // Startindex des Array für temporäres Zwischenspeichern (16 Noten)
 keys = 1032; // Startindex des Array für Pseudo-Map für Key Indizes
-display_range = -2; // Setze auf -2
+display_range = -1; // Setze auf -2
 bass_follows = 1; 
 seventh_octave=0;
 nineth_octave=0;
@@ -319,8 +320,83 @@ function addBassFifth(num_notes)(
     );
 );
 
+key = 0; // 0 = Dur, 1 = Moll, 2 = Übermäßig, 3 = Vermindert, 4 = Sus2, 5 = Sus4
+notes_within_key = 1064; // Startindex für Array
+intervals = 1080;
+// Hilfsfunktion zum Umwandeln von Zeichen in Integer
+function charToInt(c) (
+    // Konvertiere das Zeichen in einen Integer
+    value = c - 48; // ASCII-Wert von '0' ist 48
+    value;
+);
+
+// Hilfsfunktion zum Umwandeln von Intervall-Strings in Integer-Arrays
+function extractIntervals(interval_str) (
+    //intervals = 1080; // Erstelle ein Array mit 7 Elementen
+    
+    // Extrahiere die Intervallwerte aus dem String
+    i = 0;
+    while (i < 7) (
+        intervals[i] = charToInt(str_getchar(interval_str, i * 2 + 1)); // Annahme: Intervallwerte sind durch ein Leerzeichen getrennt
+        i += 1;
+    );
+    
+    intervals;
+);
+
+// Hauptfunktion zur Berechnung der Noten innerhalb der Tonart
+function calculateNotesWithinKey(key) (
+    // Intervalle als Strings definieren
+    intervals_dur = "2 2 1 2 2 2 1";   // Dur
+    intervals_moll = "2 1 2 2 1 2 2";  // Moll
+    intervals_aug = "3 1 3 1 3 1";     // Übermäßig
+    intervals_dim = "2 1 2 1 2 1 2";   // Vermindert
+    intervals_sus2 = "2 2 1 2 2 2 1";  // Sus2 (gleich wie Dur)
+    intervals_sus4 = "5 2 1 2 2 2 1";  // Sus4
+    
+    // Wähle die Intervalle basierend auf der Tonart
+    intervals_str = (key == 0) ? intervals_dur : (
+                     (key == 1) ? intervals_moll : (
+                     (key == 2) ? intervals_aug : (
+                     (key == 3) ? intervals_dim : (
+                     (key == 4) ? intervals_sus2 : (
+                     (key == 5) ? intervals_sus4 : intervals_dur) // Default auf Dur
+                     )
+                     )
+                     )
+                     );
+
+    // Wandle die Intervalle in ein Array um
+    intervals = extractIntervals(intervals_str);
+
+    // Berechne die Noten
+    index = 0;
+    current_note = 0; // Startnote (z.B. C)
+    while (index < 7) (
+        // Speichere die Note im Array
+        notes_within_key[1064 + index] = current_note;
+
+        // Gehe zur nächsten Note durch Addition der Intervalle
+        current_note += intervals[index];
+        index += 1;
+    );
+
+    // Rückgabe des Index
+    1064 + 7; // Da 7 Noten berechnet werden
+);
+function allNotesOff() (
+    i = 0;
+    while (i < 127) (
+        midisend(mpos, 0x80, i, 0); // Alle Noten ausschalten
+        i += 1;
+    );
+);
+
 @slider
-// Slidervariablennamen sind schon festgegelgt im Header 
+// Slidervariablen sind schon festgelegt im Header
+
+notes_pressed = 0; // Zählt die Anzahl der gedrückten Noten
+velocity = 127;    // Standardmäßig volle Velocity
 
 @block
 // MIDI Input Verarbeitung und Akkord-Durchschleifen
@@ -328,13 +404,20 @@ while (
     midirecv(mpos, msg1, msg23) ? (
         status = msg1 & 0xF0; // Status Byte (Note On, Note Off, etc.)
         received_note = msg23 & 0x7F; // Note Value
+        velocity = (msg23 >> 7) & 0x7F; // Extrahiere die Velocity (Anschlagsstärke)
         
         // Wenn Note On, berechne den Akkord und speichere die Anzahl der Noten
         status == 0x90 ? (
+            notes_pressed += 1;
+            notes_pressed >= 2 ? (
+                allNotesOff();    // Alle Noten ausschalten, wenn 2x Note-On empfangen wurde
+                notes_pressed = 0; // Reset der Notenzählung
+            );
             note = received_note;
-            // Hier verschiede Switches einfügen: Chord, Inversion, Range, Bass
+            
+            // Hier verschiedene Switches einfügen: Chord, Inversion, Range, Bass
             num_notes = CalculateChord(received_note, chord_type); // Akkord basierend auf Slider-Einstellung berechnen
-            // Lage 
+            // Terz Lage 
             num_notes = moveThirdPosition(num_notes, third_position);
             // addN Intervalle
             seventh == 1 ? num_notes = add7th(num_notes, seventh_octave); 
@@ -347,13 +430,15 @@ while (
             bass_type > 0 ? num_notes = addBass(num_notes, bass_type, bass_octave);
             bass_fifth == 1 ? num_notes = addBassFifth(num_notes);
             
-            // Sende jede Note des Akkords als Note On-Nachricht
+            calculateNotesWithinKey(1);
+            
+            // Sende jede Note des Akkords als Note-On-Nachricht mit ursprünglicher Velocity
             i = 0;
             chord_str = sprintf(#,""); // Init
             note_str = sprintf(#,""); 
             chord_numbers = sprintf(#,""); 
             while (i < num_notes) (
-                midisend(mpos, 0x90, chord_notes[i], 127); // Note On
+                midisend(mpos, 0x90, chord_notes[i], velocity); // Verwende die ursprüngliche Velocity
                 strcat(chord_numbers, sprintf(#, "%d ", chord_notes[i])); // Verkette String als Notennummern
                 note_str = GetNoteName(chord_notes[i]); // Note als Name
                 note_str = RemoveDoubleSpaces2(note_str); // Entferne Leerzeichen
@@ -361,29 +446,27 @@ while (
                 i += 1;
             );
         );
-        
+       
         // Wenn Note Off, stoppe den Akkord
         status == 0x80 ? (
-            i = 0;
-            while (i < 127) (
-                midisend(mpos, 0x80, i, 0); // Note Off
-                i += 1;
-            );
+            allNotesOff(); // Alle Noten ausschalten
+            notes_pressed = 0; // Zurücksetzen der Zählung für gedrückte Noten
         );
         
         // Sende alle anderen MIDI-Nachrichten weiter
-        //midisend(mpos, msg1, msg23);
+        // midisend(mpos, msg1, msg23); // Optional, wenn du andere MIDI-Nachrichten durchschleifen möchtest
     );
 );
 
+
+
 @gfx 0 300 // Init x = auto
 // Grafische Ausgabe der Note und des Akkords
-//gfx_set(1,1,1,1); // Setze die Textfarbe (weiß)
-gfx_set(1,1,1,1); // Setze die Farbe auf Grün
+gfx_set(1,1,1,1); // Setze die Farbe auf Weiss
 gfx_clear = 0; // Hintergrund schwarz
 
 gfx_x = 10; gfx_y = 10; // Position
-gfx_drawstr(sprintf(#, "MIDI Note: %s", RemoveDoubleSpaces2(GetNoteName(received_note)))); // Zeichne den Notennamen
+gfx_drawstr(sprintf(#, "Root Note: %s", RemoveDoubleSpaces2(GetNoteName(received_note)))); // Zeichne den Notennamen
 
 gfx_x = 10; gfx_y = 30; // Neue Position für den Akkord
 gfx_drawstr(sprintf(#, "Chord Notes  : %s", chord_str)); // Zeichne die Akkord-Noten
@@ -392,5 +475,14 @@ gfx_drawstr(sprintf(#, "Chord Notes  : %s", chord_str)); // Zeichne die Akkord-N
    
 gfx_x = 10; gfx_y = 50; // Neue Position
 gfx_drawstr(sprintf(#, "Notenanzahl  : %d", num_notes)); // Zeichne den Text für die Anzahl der Noten
+
+// Noten in einer Tonart
+gfx_x = 10;gfx_y = 70;
+loop(7,
+notename = RemoveDoubleSpaces2(GetNoteName(notes_within_key[i]));
+//gfx_drawstr(sprintf(#, " %s", notename));
+i += 1;
+);
+
 
 DrawKeyboardWithChord(chord_notes, num_notes, octave_shift);
